@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang='ja'>
+    <head>
+        <meta charset='UTF-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+        <meta name='description' content='YMME Hubの開発者向け設定JSON生成ツールです。'>
+        <link rel='apple-touch-icon' sizes='180x180' href='res/favicon/apple-touch-icon.png'>
+        <link rel='icon' type='image/png' sizes='32x32' href='res/favicon/32px.png'>
+        <link rel='icon' type='image/png' sizes='16x16' href='res/favicon/16px.png'>
+        <!-- 以下OGP -->
+        <meta property='og:description' content='YMME Hubの開発者向け設定JSON生成ツールです。'>
+        <meta property='og:title' content='YMME Hub .JSON'>
+        <meta property='og:image' content='SNSでシェアされたときに表示する画像※かならず絶対パスを記載（相対パス不可）https://....../img/icons/logo.png'>
+        <meta property='og:image:width' content='画像の幅px'>
+        <meta property='og:image:height' content='画像の高さpx'>
+        <meta property='og:type' content='website'>
+        <meta property='og:url' content='https://json.ymme.f5.si'>
+        <!-- OGP終わり -->
+        <title>Hub.JSON</title>
+        <!-- ライブラリ等 -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/AbeShunyah/PopToastJS@main/poptoast.min.css">
+        <style>
+            body, html, head{
+                height: 100%;
+                width: 100%;
+                margin: 0;
+            }
+            .wrapper{
+                display: grid;
+                place-content: center;
+                height: 100%;
+                width: 100%;
+                background: rgb(255,0,194);
+                background: -moz-linear-gradient(145deg, rgba(255,0,194,1) 0%, rgba(183,0,255,1) 100%);
+                background: -webkit-linear-gradient(145deg, rgba(255,0,194,1) 0%, rgba(183,0,255,1) 100%);
+                background: linear-gradient(145deg, rgba(255,0,194,1) 0%, rgba(183,0,255,1) 100%);
+                filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#ff00c2",endColorstr="#b700ff",GradientType=1);
+            }
+            #main-box{
+                min-width: 75%;
+                height: auto;
+                background: rgba(0, 0, 0, 0.35);
+                backdrop-filter: blur(40px);
+                border-radius: 15px;
+                color: white;
+                padding: 15px;
+            }
+            .big-field{
+                field-sizing: content;
+                min-height: 5em;
+                resize: none;
+                max-width: 50vw;
+                width: 100%;
+                height: auto;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                &::after{
+                    content: "\A";
+                    white-space: pre;
+                }
+                &:not(.not-center){
+                    place-self: center;
+                }
+            }
+            .list{
+                display: grid;
+                place-content: center;
+                place-self: center;
+                justify-content: center;
+                grid-template-columns: 1fr 1fr 1fr;
+                grid-auto-columns: 1fr;
+                gap: 10px;
+                grid-auto-flow: row;
+            }
+            .label{
+                font-weight: bold;
+                &::after{
+                    content: "\A";
+                    white-space: pre;
+                }
+            }
+            .input{
+                outline: none;
+                border: solid 2px rgb(196, 196, 196);
+                border-radius: 5px;
+                padding: .15em;
+                &:focus{
+                    border-color: rgba(var(--color_rgb), .5);
+                    box-sizing: border-box;
+                }
+            }
+            #submit{
+                background-color: rgb(82, 82, 255);
+                padding: 5px;
+                border-radius: 5px;
+                color: white;
+                width: 100%;
+                border: 0;
+                cursor: pointer;
+                box-shadow: 0 .5px 0 .5px rgba(245, 245, 245, 0.4);
+            }
+            #submit:hover{
+                background-color: rgb(54, 54, 171);
+                box-shadow: 0 .5px 0 .5px black;
+            }
+            .field{
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrapper">
+            <div id="main-box">
+                <textarea name="" id="destination" class="big-field" readonly></textarea>
+                <div class="list">
+                    <div class="field">
+                        <label class="label">ID(半角英数字)</label>
+                        <input type="text" class="input" id="id" maxlength="32">
+                    </div>
+                    <div class="field">
+                        <label class="label">日本語名</label>
+                        <input type="text" class="input" id="name" maxlength="32">
+                    </div>
+                    <div class="field">
+                        <label class="label">作者名</label>
+                        <input type="text" class="input" id="author_name" maxlength="32">
+                    </div>
+                    <div class="field">
+                        <label class="label">画像の数</label>
+                        <input type="range" id="img-range" name="" max="4" min="1">
+                        <input type="text" readonly style="width: 1em; height: 1em;" id="img-range-text">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">説明</label>
+                    <small>以前とは違うので、brタグを使用しなくて大丈夫です。</small>
+                    <textarea name="" id="desc" class="big-field not-center"></textarea>
+                </div>
+                <div class="field">
+                    <button id="submit">生成</button>
+                </div>
+            </div>
+        </div>
+        <!-- 内容を記述 -->
+        <script src="https://cdn.jsdelivr.net/gh/AbeShunyah/PopToastJS@main/poptoast.min.js"></script>
+        <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+        <script type="module">
+            document.addEventListener('DOMContentLoaded',()=>{
+                const toast = new PopToast();
+                const destination = document.getElementById("destination");
+                const selection = window.getSelection();  // 選択されている文字列を取得
+                const range = document.createRange();     // 選択範囲を作成する
+                const submit = document.getElementById("submit");
+                const id_input = document.getElementById("id");
+                const name_input = document.getElementById("name");
+                const author_input = document.getElementById("author_name");
+                const slider = document.getElementById("img-range");
+                slider.value = 1;
+                destination.addEventListener("click", ()=>{
+                    navigator.clipboard.writeText(destination.value);
+                    toast.show('コピーしました！');
+                })
+                slider.addEventListener('input', (e)=>{document.getElementById("img-range-text").value=e.target.value})
+                submit.addEventListener('click',()=>{
+                    let temp_desc=document.getElementById("desc").value.replace(/&/g, "&amp;");
+                    temp_desc=temp_desc.replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\r?\n/g, '<br>').replace(/b}/g, "</bold>").replace(/b{/g, "<bold>").replace(/¥/g, "&yen;").replace(/‘/g, "&#39;").replace(/£/g, "&pound;").replace(/©/g, "&copy;").replace(/®/g, "&reg;");
+                    destination.value = `
+{
+    "id": "${id_input.value}",
+    "name": "${name_input.value}",
+    "author": "${author_input.value}",
+    "desc": "${temp_desc}",
+    "file": "${id_input.value}.ymme",
+    "img": "${slider.value}"
+}
+                    `
+                })
+            })
+        </script>
+    </body>
+</html>
